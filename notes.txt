@@ -2,11 +2,13 @@ Tracker Bot
 
 Logs discord text channels to a database.
 
-On ready it should verify the existence of a database for the output and create it if it doesn't exist.
-Then it should log messages up until the present message.
-Then every X minutes it should update the database with any new messages.
+~~On ready it should verify the existence of a database for the output and create it if it doesn't exist.~~
+~~Then it should log messages up until the present message.~~
+Then every X minutes it should update the database with any new messages or via on_message
 
+Need tables for emoji/reactions/embeds
 New table for reactions. Primary key = Message.id
+Create server white/blacklist
 
 The data I'm interested in:
 * Graph of amount of messages for each day

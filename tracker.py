@@ -1,60 +1,11 @@
 import discord
 import asyncio
 import psycopg2
-import configparser
-
-
-def pgsql_connect():
-	config = configparser.ConfigParser()
-	config.read('db.config')
-	conn = psycopg2.connect(
-		database=config['db']['database'],
-		user=config['db']['user'],
-		password=config['db']['password'],
-		host=config['db']['host'],
-		port=config['db']['port'])
-	return conn
-
-
-def drop(conn, tablename):
-	try:
-		cur = conn.cursor()
-		cur.execute("DROP TABLE " + tablename)
-		conn.commit()
-	except:
-		conn.commit()
-
-
-def initialize_db(conn):
-	init_cur = conn.cursor()
-
-	drop(conn, "chatlog")
-	init_cur.execute("""CREATE TABLE chatlog (
-		author text,
-		author_id bigint,
-		content text,
-		channel text,
-		channel_id bigint,
-		id bigint,
-		embeds text,
-		reactions text,
-		channel_mentions text,
-		role_mentions text,
-		mentions text,
-		guild text,
-		guild_id bigint,
-		created_at timestamp,
-		edited_at timestamp
-		);""")
-	conn.commit()
-	init_cur.close()
-
+from trackerlib.db_utils import *
 
 class MyClient(discord.Client):
 	async def on_ready(self):
-		print('Logged in as')
-		print(self.user.name)
-		print(self.user.id)
+		print('Logged in as: {} (ID: {})').format(self.user.name, self.user.id)
 		# print(self.guilds)
 
 		conn = pgsql_connect()
@@ -62,26 +13,27 @@ class MyClient(discord.Client):
 		cur = conn.cursor()
 
 		for guild in self.guilds:
-			if guild.name != "Reeeeeeeeeee":
+			if guild.name != "Reee":
 				for channel in guild.channels:
-					if isinstance(channel, discord.channel.TextChannel):
-						print("{}: {}".format(guild.name, channel))
-
+					if isinstance(channel, discord.channel.TextChannel) and channel.permissions_for(guild.me).read_messages:
+						print("{}: #{}".format(guild.name, channel), end='')
 						cur3 = conn.cursor()
+						# Backlog logger
+						firstmessage = None
 						while True:
-							cur3.execute("""SELECT id FROM chatlog WHERE channel_id='{}' AND guild_id='{}' ORDER BY created_at ASC LIMIT 1""".format(
-								channel.id, guild.id))
-							try:
-								firstmessage = discord.Object(cur3.fetchone()[0])
-							except TypeError:
-								firstmessage = None
-								print("No first message found.")
-
+							if firstmessage is None:
+								cur3.execute("""SELECT id FROM chatlog WHERE channel_id='{}' AND guild_id='{}' ORDER BY created_at ASC LIMIT 1""".format(
+									channel.id, guild.id))
+								try:
+									firstmessage = discord.Object(cur3.fetchone()[0])
+								except TypeError:
+									firstmessage = None
+									print("\nNo first message found. Starting at most recent message.")
 							try:
 								message_list = []
-								first = True
-								async for message in channel.history(limit=1000, before=firstmessage):
-									first = False
+								count = 0
+								async for message in channel.history(limit=1, before=firstmessage):
+									count += 1
 									message_list.append((
 										guild.id,
 										message.author.name,
@@ -90,26 +42,28 @@ class MyClient(discord.Client):
 										message.channel.name,
 										channel.id,
 										message.id,
-										message.embeds.__str__(),
-										message.reactions.__str__(),
-										message.channel_mentions.__str__(),
-										message.role_mentions.__str__(),
-										message.mentions.__str__(),
+										True if message.embeds else False,
+										message.reactions.__str__() if message.reactions else None,
+										message.channel_mentions.__str__() if message.channel_mentions else None,
+										message.role_mentions.__str__() if message.role_mentions else None,
+										message.mentions.__str__() if message.mentions else None,
 										message.guild.name,
 										message.created_at,
 										message.edited_at))
-								if first is True:
+									firstmessage = message
+								if count == 0:
 									break
 								args_str = b','.join(cur.mogrify("(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)", x) for x in message_list)
 								cur.execute(b"INSERT INTO chatlog (guild_id, author, author_id, content, channel, channel_id, id, embeds, reactions, channel_mentions, role_mentions, mentions, guild, created_at, edited_at) VALUES " + args_str)
 								conn.commit()
-								print("Added rows.")
-
+								print(".", end="")
 							except discord.errors.Forbidden as e:
 								print(e)
 								break
 						cur3.close()
 
+
+						# New message logger
 						cur2 = conn.cursor()
 						cur2.execute("""SELECT id FROM chatlog WHERE channel_id='{}' AND guild_id='{}' ORDER BY created_at DESC LIMIT 1""".format(
 							channel.id, guild.id))
@@ -122,9 +76,9 @@ class MyClient(discord.Client):
 
 						try:
 							message_list = []
-							first = True
+							count = 0
 							async for message in channel.history(limit=None, after=lastmessage):
-								first = False
+								count += 1
 								# print(message.created_at, message.author.name, message.content)
 								message_list.append((
 									guild.id,
@@ -134,27 +88,31 @@ class MyClient(discord.Client):
 									message.channel.name,
 									channel.id,
 									message.id,
-									message.embeds.__str__(),
-									message.reactions.__str__(),
-									message.channel_mentions.__str__(),
-									message.role_mentions.__str__(),
-									message.mentions.__str__(),
+									True if message.embeds else False,
+									message.reactions.__str__() if message.reactions else None,
+									message.channel_mentions.__str__() if message.channel_mentions else None,
+									message.role_mentions.__str__() if message.role_mentions else None,
+									message.mentions.__str__() if message.mentions else None,
 									message.guild.name,
 									message.created_at,
 									message.edited_at))
-							if first is True:
+							if count == 0:
+								print(" <No new messages>")
 								continue
 							args_str = b','.join(cur.mogrify("(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)", x) for x in message_list)
 							cur.execute(b"INSERT INTO chatlog (guild_id, author, author_id, content, channel, channel_id, id, embeds, reactions, channel_mentions, role_mentions, mentions, guild, created_at, edited_at) VALUES " + args_str)
 							conn.commit()
-							print("Completed.")
+							print(" [Added {} messages]".format(count))
 						except discord.errors.Forbidden as e:
 							print(e)
 		conn.close()
-		print("Connection closed.")
-		print('------')
+		print("Data connection closed.")
 		client.logout()
 		client.close()
+		print('Data collection completed. It is safe to end the script.')
+	# # Use this to log messages as they come in
+	# async def on_message():
+	# 	print("New message posted.")
 
 
 client = MyClient()
