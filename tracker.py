@@ -1,21 +1,37 @@
 import discord
 import asyncio
 import psycopg2
+import configparser
 from trackerlib.db_utils import *
+
+
+def blacklist_check(guild, channel, blacklist):
+	try:
+		if channel.name.lower() in blacklist[guild.name].split('\n')[1:]:
+			return False
+		else:
+			return True
+	except KeyError:
+		return True
+
 
 class MyClient(discord.Client):
 	async def on_ready(self):
-		print('Logged in as: {} (ID: {})').format(self.user.name, self.user.id)
+		print('Logged in as: {0} (ID: {1})'.format(self.user.name, self.user.id))
 		# print(self.guilds)
+		config = configparser.ConfigParser()
+		config.read('tracker.config')
+		whitelist = config['Whitelist']
+		blacklist = config['Blacklist']
 
 		conn = pgsql_connect()
-		# initialize_db(conn)
+		# initialize_db(conn) # Do not turn on unless you're planning on wiping the database.
 		cur = conn.cursor()
 
 		for guild in self.guilds:
-			if guild.name != "Reee":
+			if guild.name.lower() in [x for x in whitelist]:
 				for channel in guild.channels:
-					if isinstance(channel, discord.channel.TextChannel) and channel.permissions_for(guild.me).read_messages:
+					if (isinstance(channel, discord.channel.TextChannel) and channel.permissions_for(guild.me).read_messages) and ((channel.name.lower() in whitelist[guild.name].split('\n')[1:] or not whitelist[guild.name]) and blacklist_check(guild, channel, blacklist)):
 						print("{}: #{}".format(guild.name, channel), end='')
 						cur3 = conn.cursor()
 						# Backlog logger
@@ -107,9 +123,9 @@ class MyClient(discord.Client):
 							print(e)
 		conn.close()
 		print("Data connection closed.")
-		client.logout()
-		client.close()
 		print('Data collection completed. It is safe to end the script.')
+	# await client.wait_until_ready()
+	# print("Test lol!")
 	# # Use this to log messages as they come in
 	# async def on_message():
 	# 	print("New message posted.")
