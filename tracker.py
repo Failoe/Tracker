@@ -4,6 +4,9 @@ import psycopg2
 import configparser
 from trackerlib.db_utils import *
 
+config = configparser.ConfigParser()
+config.read('tracker.config')
+
 
 def blacklist_check(guild, channel, blacklist):
 	try:
@@ -19,8 +22,6 @@ class MyClient(discord.Client):
 	async def on_ready(self):
 		print('Logged in as: {0} (ID: {1})'.format(self.user.name, self.user.id))
 		# print(self.guilds)
-		config = configparser.ConfigParser()
-		config.read('tracker.config')
 		whitelist = config['Whitelist']
 		blacklist = config['Blacklist']
 
@@ -132,4 +133,4 @@ class MyClient(discord.Client):
 
 
 client = MyClient()
-client.run(open('token.txt').read(), bot=False)
+client.run(config['Discord Auth']['token'], bot=False)
