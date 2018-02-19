@@ -49,7 +49,7 @@ class MyClient(discord.Client):
 							try:
 								message_list = []
 								count = 0
-								async for message in channel.history(limit=1, before=firstmessage):
+								async for message in channel.history(limit=1000, before=firstmessage):
 									count += 1
 									message_list.append((
 										guild.id,

@@ -4,13 +4,13 @@ import configparser
 
 def pgsql_connect():
 	config = configparser.ConfigParser()
-	config.read('db.config')
+	config.read('tracker.config')
 	conn = psycopg2.connect(
-		database=config['db']['database'],
-		user=config['db']['user'],
-		password=config['db']['password'],
-		host=config['db']['host'],
-		port=config['db']['port'])
+		database=config['PostgreSQL']['database'],
+		user=config['PostgreSQL']['user'],
+		password=config['PostgreSQL']['password'],
+		host=config['PostgreSQL']['host'],
+		port=config['PostgreSQL']['port'])
 	return conn
 
 

@@ -56,7 +56,7 @@ Tracker guild:
 ```
 
 
-## Features I am looking to add
+## Improvements I am working on
 
 * Build database tables on initial boot
 * Automatically log new messages
@@ -64,3 +64,4 @@ Tracker guild:
 * Create User table to track user name/role changes
 * Create emoji/reactions/embeds tables
 * Web interface or discord output with charts of the data
+* Clean up initial database building output
