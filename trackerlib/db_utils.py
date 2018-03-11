@@ -26,7 +26,6 @@ def drop(conn, tablename):
 def initialize_db(conn):
 	init_cur = conn.cursor()
 
-	drop(conn, "chatlog")
 	init_cur.execute("""CREATE TABLE chatlog (
 		author text,
 		author_id bigint,
@@ -45,13 +44,26 @@ def initialize_db(conn):
 		edited_at timestamp
 		);""")
 
-	drop(conn, "reactionslog")
 	init_cur.execute("""CREATE TABLE reactionslog (
 		message_id bigint,
 		reaction_emoji text,
 		count smallint,
 		emoji_id bigint,
 		animated boolean
+		);""")
+	conn.commit()
+	init_cur.close()
+
+
+def build_roles_table(conn):
+	drop(conn, 'roles')
+
+	init_cur = conn.cursor()
+	init_cur.execute("""CREATE TABLE roles (
+		guild_id bigint,
+		role text,
+		role_id bigint,
+		UNIQUE (guild_id, role_id)
 		);""")
 	conn.commit()
 	init_cur.close()

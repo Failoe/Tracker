@@ -65,3 +65,7 @@ Tracker guild:
 * Create emoji/reactions/embeds tables
 * Web interface or discord output with charts of the data
 * Clean up initial database building output
+* Split up logging going forward
+* Improve backlog collection when interrupted
+* Improve backlog process output
+* Change process flow to check DB for entries, then go from the earliest backwards, then the latest forwards
