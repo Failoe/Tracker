@@ -1,0 +1,20 @@
+[Discord Auth]
+token = 
+
+[PostgreSQL]
+database = 
+user = 
+password = 
+host = 
+port = 5432
+
+[Whitelist]
+Example Guild:
+	example-channel
+Second Example:
+Third Example:
+
+[Blacklist]
+Second Example:
+	blacklisted-channel
+	another-blacklisted-channel
