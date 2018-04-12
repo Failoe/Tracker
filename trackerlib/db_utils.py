@@ -2,9 +2,9 @@ import psycopg2
 import configparser
 
 
-def pgsql_connect():
+def pgsql_connect(config_path):
 	config = configparser.ConfigParser()
-	config.read('tracker.config')
+	config.read(config_path)
 	conn = psycopg2.connect(
 		database=config['PostgreSQL']['database'],
 		user=config['PostgreSQL']['user'],
@@ -56,14 +56,39 @@ def initialize_db(conn):
 
 
 def build_roles_table(conn):
-	drop(conn, 'roles')
-
 	init_cur = conn.cursor()
 	init_cur.execute("""CREATE TABLE roles (
 		guild_id bigint,
 		role text,
 		role_id bigint,
 		UNIQUE (guild_id, role_id)
+		);""")
+	conn.commit()
+	init_cur.close()
+
+
+def build_user_role_table(conn):
+	init_cur = conn.cursor()
+	# drop(conn, 'user_roles')
+	init_cur.execute("""CREATE TABLE IF NOT EXISTS user_roles (
+		guild_id bigint,
+		user_id bigint,
+		role_id bigint,
+		UNIQUE (guild_id, user_id, role_id)
+		);""")
+	conn.commit()
+	init_cur.close()
+
+
+def build_user_name_table(conn):
+	init_cur = conn.cursor()
+	# drop(conn, 'user_names')
+	init_cur.execute("""CREATE TABLE IF NOT EXISTS user_names (
+		guild_id bigint,
+		user_id bigint,
+		member_name text,
+		display_name text,
+		UNIQUE (guild_id, user_id)
 		);""")
 	conn.commit()
 	init_cur.close()

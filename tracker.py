@@ -30,7 +30,7 @@ class MyClient(discord.Client):
 		whitelist = config['Whitelist']
 		blacklist = config['Blacklist']
 
-		conn = pgsql_connect()
+		conn = pgsql_connect('tracker.config')
 		cur = conn.cursor()
 
 		for guild in self.guilds:
@@ -41,15 +41,22 @@ class MyClient(discord.Client):
 				conn.commit()
 
 				# Add Member Info to DB
+				memb_role_list = []
 				for memb in guild.members:
 					# Add member/guild info to tables
-					guild.id
-					str(memb)
-					memb.nick
+					cur.execute(cur.mogrify("""	INSERT INTO user_names (guild_id, user_id, member_name, display_name)
+												VALUES (%s,%s,%s,%s)
+												ON CONFLICT (guild_id, user_id) DO
+												UPDATE SET member_name = %s, display_name = %s""",
+												(guild.id, memb.id, str(memb), memb.display_name, str(memb), memb.display_name)))
+
 					for member_role in memb.roles:
 						# Add member/role info to tables
-						member_role.id
-						member_role.name
+						memb_role_list.append((guild.id, memb.id, member_role.id))
+
+				args_str = b','.join(cur.mogrify("(%s,%s,%s)", x) for x in memb_role_list)
+				cur.execute(b'INSERT INTO user_roles (guild_id, user_id, role_id) VALUES %s ON CONFLICT (guild_id, role_id, user_id) DO NOTHING' % args_str)
+				conn.commit()
 
 				for channel in guild.channels:
 					if (isinstance(channel, discord.channel.TextChannel) and channel.permissions_for(guild.me).read_messages) and ((channel.name.lower() in whitelist[guild.name].split('\n')[1:] or not whitelist[guild.name]) and blacklist_check(guild, channel, blacklist)):
@@ -151,10 +158,13 @@ class MyClient(discord.Client):
 		conn.close()
 		print("Data connection closed.")
 		print('Data collection completed. It is safe to end the script.')
+
+		exit()
+
 	# await client.wait_until_ready()
 	# print("Test lol!")
 	# # Use this to log messages as they come in
-	# async def on_message():
+	# async def on_message(message):
 	# 	print("New message posted.")
 
 
